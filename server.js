@@ -35,7 +35,9 @@ function normalizeWebtoon(item) {
     score: normalizeScore(item.score, item.rating),
     reviewReason: String(item.reviewReason || item.detailReview || '').trim(),
     recommendation: ['recommend', 'not_recommend'].includes(item.recommendation) ? item.recommendation : 'recommend',
-    comments: Array.isArray(item.comments) ? item.comments.map(normalizeComment) : []
+    likeCount: Number(item.likeCount||0),
+    dislikeCount: Number(item.dislikeCount||0),
+    comments: Array.isArray(item.comments) ? item.comments.map(normalizeComment).map(c=>({...c, likeCount:Number(c.likeCount||0)})) : []
   };
 }
 
@@ -57,7 +59,7 @@ app.post('/api/webtoons', requireAdmin, asyncHandler(async (req, res) => {
   const { title, genre, tier = 'B', score = 0, note = '', imageUrl = '', reviewReason = '', recommendation = 'recommend' } = req.body || {};
   if (!title) return res.status(400).json({ error: 'title is required' });
   const safeRec = ['recommend', 'not_recommend'].includes(recommendation) ? recommendation : 'recommend';
-  const item = normalizeWebtoon({ id: crypto.randomUUID(), title: String(title).trim(), genre: String(genre || '기타').trim(), tier: String(tier).toUpperCase(), score: normalizeScore(score), note: String(note).trim(), imageUrl: String(imageUrl).trim(), reviewReason: String(reviewReason).trim(), recommendation: safeRec, comments: [], createdAt: new Date().toISOString() });
+  const item = normalizeWebtoon({ id: crypto.randomUUID(), title: String(title).trim(), genre: String(genre || '기타').trim(), tier: String(tier).toUpperCase(), score: normalizeScore(score), note: String(note).trim(), imageUrl: String(imageUrl).trim(), reviewReason: String(reviewReason).trim(), recommendation: safeRec, likeCount:0, dislikeCount:0, comments: [], createdAt: new Date().toISOString() });
   if (!['S', 'A', 'B', 'C', 'D'].includes(item.tier)) return res.status(400).json({ error: 'invalid tier' });
   const items = await readWebtoons(); items.push(item); await writeWebtoons(items); res.status(201).json(item);
 }));
@@ -80,6 +82,22 @@ app.delete('/api/webtoons/:id/comments/:commentId', requireAdmin, asyncHandler(a
   items[i].comments = items[i].comments.filter((c) => c.id !== req.params.commentId);
   if (before === items[i].comments.length) return res.status(404).json({ error: 'comment not found' });
   await writeWebtoons(items); res.status(204).send();
+}));
+
+
+app.post('/api/webtoons/:id/vote', asyncHandler(async (req, res) => {
+  const { type } = req.body || {};
+  if (!['like','dislike','clear'].includes(type)) return res.status(400).json({ error: 'invalid vote type' });
+  const items = await readWebtoons(); const i = items.findIndex((x)=>x.id===req.params.id);
+  if (i===-1) return res.status(404).json({ error:'webtoon not found' });
+  if (type==='like') items[i].likeCount += 1;
+  if (type==='dislike') items[i].dislikeCount += 1;
+  await writeWebtoons(items); res.json({ likeCount: items[i].likeCount, dislikeCount: items[i].dislikeCount });
+}));
+app.post('/api/webtoons/:id/comments/:commentId/like', asyncHandler(async (req,res)=>{
+  const items=await readWebtoons(); const i=items.findIndex(x=>x.id===req.params.id); if(i===-1) return res.status(404).json({error:'webtoon not found'});
+  const c=items[i].comments.find(x=>x.id===req.params.commentId); if(!c) return res.status(404).json({error:'comment not found'});
+  c.likeCount = Number(c.likeCount||0)+1; await writeWebtoons(items); res.json({ likeCount:c.likeCount });
 }));
 
 app.use((err, _req, res, _next) => res.status(500).json({ error: 'internal server error' }));
