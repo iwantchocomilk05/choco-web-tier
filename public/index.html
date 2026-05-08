@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>내 웹툰 티어표</title><link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<main>
+  <h1>📚 내 웹툰 티어표</h1>
+  <section class="card admin-panel">
+    <div class="admin-row">
+      <input id="admin-username" placeholder="아이디" /><input id="admin-password" type="password" placeholder="비밀번호" />
+      <button id="admin-login" type="button">로그인</button><button id="admin-logout" type="button" class="secondary">로그아웃</button>
+    </div><p id="admin-status" class="status"></p>
+  </section>
+
+  <section class="card" id="add-section" hidden>
+    <h2>웹툰 추가</h2>
+    <form id="add-form">
+      <input name="title" placeholder="웹툰 제목" required />
+      <input name="genre" placeholder="장르" />
+      <select name="tier"><option>S</option><option>A</option><option selected>B</option><option>C</option><option>D</option></select>
+      <input name="score" type="number" min="0" max="10" step="0.1" placeholder="점수 (0~10)" required />
+      <input name="imageUrl" placeholder="표지 이미지 URL" />
+      <input name="note" placeholder="한 줄 추천 이유" />
+      <textarea name="reviewReason" placeholder="상세 평가 이유"></textarea>
+      <button type="submit">추가</button>
+    </form>
+  </section>
+
+  <section class="card"><h2>티어표</h2><div id="tiers"></div></section>
+</main>
+
+<div id="detail-modal" class="modal hidden">
+  <div class="modal-content">
+    <button id="modal-close" class="secondary">닫기</button>
+    <div id="detail-body"></div>
+  </div>
+</div>
+<script src="main.js"></script>
+</body></html>
