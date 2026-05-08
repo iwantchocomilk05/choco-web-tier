@@ -1,0 +1,10 @@
+<!doctype html><html lang='ko'><head><meta charset='UTF-8'/><meta name='viewport' content='width=device-width, initial-scale=1.0'/><title>Webtoon Tier Lounge</title><link rel='stylesheet' href='styles.css'/></head><body>
+<div class='app-shell'>
+<header class='hero'><div><h1>Webtoon Tier Lounge</h1><p>anime healing review community</p></div><div class='mascot'>🌸📚</div><button id='menu-btn' class='icon-btn'>☰</button></header>
+<aside id='admin-drawer' class='drawer hidden'><h3>관리자</h3><input id='admin-username' placeholder='ID'/><input id='admin-password' type='password' placeholder='PW'/><button id='admin-login'>로그인</button><button id='admin-logout' class='ghost'>로그아웃</button><p id='admin-status'></p></aside>
+<main id='list-view'>
+<section id='add-section' class='panel hidden'><h2>작품 추가</h2><form id='add-form'><input name='title' placeholder='제목' required/><input name='genre' placeholder='장르'/><select name='tier'><option>S</option><option>A</option><option selected>B</option><option>C</option><option>D</option></select><input name='score' type='number' step='0.1' min='0' max='10' placeholder='점수'/><input name='imageUrl' placeholder='표지URL'/><input name='note' placeholder='한줄평'/><textarea name='reviewReason' placeholder='상세평가'></textarea><button>등록</button></form></section>
+<div id='tiers'></div></main>
+<section id='detail-view' class='hidden'></section>
+</div>
+<script src='main.js'></script></body></html>
