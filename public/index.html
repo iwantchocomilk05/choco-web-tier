@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>내 웹툰 티어표</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main>
+      <h1>📚 내 웹툰 티어표</h1>
+      <p>추천용 공개 페이지입니다. 다른 사람은 조회만 가능하고, 관리자만 수정할 수 있습니다.</p>
+
+      <section class="card admin-panel">
+        <h2>관리자 모드</h2>
+        <div class="admin-row">
+          <input id="admin-password" type="password" placeholder="관리자 비밀번호" />
+          <button id="admin-login" type="button">관리자 로그인</button>
+          <button id="admin-logout" type="button" class="secondary">로그아웃</button>
+        </div>
+        <p id="admin-status" class="status"></p>
+      </section>
+
+      <section class="card" id="add-section" hidden>
+        <h2>웹툰 추가</h2>
+        <form id="add-form">
+          <input name="title" placeholder="웹툰 제목" required />
+          <input name="genre" placeholder="장르 (예: 액션)" />
+          <select name="tier">
+            <option>S</option><option>A</option><option selected>B</option><option>C</option><option>D</option>
+          </select>
+          <select name="rating">
+            <option value="5">★★★★★</option><option value="4">★★★★☆</option><option value="3" selected>★★★☆☆</option><option value="2">★★☆☆☆</option><option value="1">★☆☆☆☆</option>
+          </select>
+          <input name="note" placeholder="한 줄 추천 이유" />
+          <button type="submit">추가</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>티어표</h2>
+        <div id="tiers"></div>
+      </section>
+    </main>
+
+    <script src="main.js"></script>
+  </body>
+</html>
