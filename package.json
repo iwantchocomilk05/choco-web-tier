@@ -1,0 +1,13 @@
+{
+  "name": "webtoon-tier-site",
+  "version": "1.0.0",
+  "description": "Custom webtoon tier list + star ratings app",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
