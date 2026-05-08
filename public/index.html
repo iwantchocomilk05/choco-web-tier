@@ -9,14 +9,13 @@
   <body>
     <main>
       <h1>📚 내 웹툰 티어표</h1>
-      <p>공유용 공개 페이지(조회/댓글 가능). 관리자 로그인 시에만 수정 가능합니다.</p>
+      <p>추천용 공개 페이지입니다. 다른 사람은 조회만 가능하고, 관리자만 수정할 수 있습니다.</p>
 
       <section class="card admin-panel">
-        <h2>관리자 로그인</h2>
+        <h2>관리자 모드</h2>
         <div class="admin-row">
-          <input id="admin-username" type="text" placeholder="아이디" />
-          <input id="admin-password" type="password" placeholder="비밀번호" />
-          <button id="admin-login" type="button">로그인</button>
+          <input id="admin-password" type="password" placeholder="관리자 비밀번호" />
+          <button id="admin-login" type="button">관리자 로그인</button>
           <button id="admin-logout" type="button" class="secondary">로그아웃</button>
         </div>
         <p id="admin-status" class="status"></p>
@@ -27,9 +26,12 @@
         <form id="add-form">
           <input name="title" placeholder="웹툰 제목" required />
           <input name="genre" placeholder="장르 (예: 액션)" />
-          <select name="tier"><option>S</option><option>A</option><option selected>B</option><option>C</option><option>D</option></select>
-          <select name="rating"><option value="5">★★★★★</option><option value="4">★★★★☆</option><option value="3" selected>★★★☆☆</option><option value="2">★★☆☆☆</option><option value="1">★☆☆☆☆</option></select>
-          <input name="imageUrl" placeholder="표지 이미지 URL" />
+          <select name="tier">
+            <option>S</option><option>A</option><option selected>B</option><option>C</option><option>D</option>
+          </select>
+          <select name="rating">
+            <option value="5">★★★★★</option><option value="4">★★★★☆</option><option value="3" selected>★★★☆☆</option><option value="2">★★☆☆☆</option><option value="1">★☆☆☆☆</option>
+          </select>
           <input name="note" placeholder="한 줄 추천 이유" />
           <button type="submit">추가</button>
         </form>
