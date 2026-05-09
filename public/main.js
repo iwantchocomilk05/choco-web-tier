@@ -1,7 +1,7 @@
 const tiers=['S','A','B','C','D'];let isAdmin=false;let data=[];let sortMode='latest';const ADMIN='쪼코우유먹을래';
 const $=(s)=>document.querySelector(s);const voteKey=(id)=>`vote:${id}`;const clikeKey=(id,c)=>`clike:${id}:${c}`;
 const api=async(u,o={})=>{const r=await fetch(u,{...o,credentials:'include'});if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error||'err');return r.status===204?null:r.json()};
-const BAD_WORDS=['노무현','응디','부엉이','운지','섹스','씨발','시발','병신','좆','ㅅㅂ','shit','fuck'];
+const BAD_WORDS=['노무현','응디','부엉이','운지','섹스','씨발','시발','병신','좆','ㅅㅂ','shit','fuck','니애미','ㅄ','ㅂㅅ','병신','보지','자지','엄마','sex','cex'];
 const normalizeText=(t='')=>String(t).toLowerCase().replace(/[^a-z0-9가-힣]/g,'');
 const containsProfanity=(t='')=>BAD_WORDS.some(w=>normalizeText(t).includes(normalizeText(w)));
 const fmt=(d)=>{if(!d)return'시간 정보 없음';const x=new Date(d),p=n=>String(n).padStart(2,'0');return `${p(x.getMonth()+1)}/${p(x.getDate())} ${p(x.getHours())}:${p(x.getMinutes())}`};
