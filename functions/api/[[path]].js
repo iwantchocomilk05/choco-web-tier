@@ -79,7 +79,7 @@ export async function onRequest(context) {
     const cur = await db.prepare('SELECT * FROM webtoons WHERE id=?').bind(id).first();
     if (!cur) return json({ error: 'not found' }, 404);
     const b = await request.json();
-    await db.prepare('UPDATE webtoons SET tier=?, score=?, review_reason=? WHERE id=?').bind((b.tier || cur.tier).toUpperCase(), b.score ?? cur.score, b.reviewReason ?? cur.review_reason, id).run();
+    await db.prepare('UPDATE webtoons SET title=?, genre=?, tier=?, score=?, image_url=?, note=?, review_reason=? WHERE id=?').bind(b.title ?? cur.title, b.genre ?? cur.genre, (b.tier || cur.tier).toUpperCase(), b.score ?? cur.score, b.imageUrl ?? cur.image_url, b.note ?? cur.note, b.reviewReason ?? cur.review_reason, id).run();
     const one = await db.prepare('SELECT * FROM webtoons WHERE id=?').bind(id).first();
     return json(rowsToWebtoon(one));
   }
@@ -107,7 +107,8 @@ export async function onRequest(context) {
     const nickname = isAdmin ? '쪼코우유먹을래' : (b.nickname || '익명');
     const content = b.content || '';
     if (containsProfanity(nickname) || containsProfanity(content)) return json({ error: '부적절한 표현이 포함되어 있어 등록할 수 없습니다.' }, 400);
-    comments.push({ id: crypto.randomUUID(), nickname, content, createdAt: new Date().toISOString(), likeCount: 0, isAdmin, replies: [] });
+    const ratingVal = b.rating===undefined||b.rating===null||b.rating==='' ? null : Number(b.rating);
+    comments.push({ id: crypto.randomUUID(), nickname, content, rating: Number.isFinite(ratingVal)&&ratingVal>=0&&ratingVal<=10?ratingVal:null, createdAt: new Date().toISOString(), likeCount: 0, isAdmin, replies: [] });
     await db.prepare('UPDATE webtoons SET comments_json=? WHERE id=?').bind(JSON.stringify(comments), id).run();
     return json(comments[comments.length - 1], 201);
   }
