@@ -27,11 +27,14 @@ export async function onRequest(context) {
 
   const rowsToWebtoon = (r) => ({ ...r, score: Number(r.score || 0), likeCount: Number(r.like_count || 0), dislikeCount: Number(r.dislike_count || 0), imageUrl: r.image_url || '', reviewReason: r.review_reason || '', comments: JSON.parse(r.comments_json || '[]') });
 
-  const BAD_WORDS = ['노무현','응디','부엉이','운지','섹스','씨발','시발','병신','보지','자지','니애미','엄마','좆','ㅅㅂ','shit','fuck','ㅂㅅ','ㅄ','cex','sex'];
-  const normalizeText = (t='') => String(t).toLowerCase().replace(/[^a-z0-9가-힣]/g,'');
+  const BAD_WORDS = ['씨발','시발','병신','fuck','fucking','shit','bitch','섹스'];
+  const normalizeText = (t='') => String(t).toLowerCase().replace(/[^a-z0-9가-힣\s]/g,' ').replace(/\s+/g,' ').trim();
+  // 오탐 방지를 위해 문장 경계/토큰 기반으로 검사
   const containsProfanity = (t='') => {
     const n = normalizeText(t);
-    return BAD_WORDS.some((w) => n.includes(normalizeText(w)));
+    if (!n) return false;
+    const tokens = n.split(' ');
+    return BAD_WORDS.some((w) => tokens.includes(normalizeText(w)) || n.match(new RegExp(`(^|\\s)${normalizeText(w)}($|\\s)`)));
   };
 
   if (seg[0] === 'auth' && seg[1] === 'login' && method === 'POST') {

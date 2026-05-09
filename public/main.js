@@ -1,13 +1,54 @@
 const tiers=['S','A','B','C','D'];let isAdmin=false;let data=[];let sortMode='latest';const ADMIN='쪼코우유먹을래';
 const $=(s)=>document.querySelector(s);const voteKey=(id)=>`vote:${id}`;const clikeKey=(id,c)=>`clike:${id}:${c}`;
 const api=async(u,o={})=>{const r=await fetch(u,{...o,credentials:'include'});if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error||'err');return r.status===204?null:r.json()};
-const BAD_WORDS=['노무현','응디','부엉이','운지','섹스','씨발','시발','병신','좆','ㅅㅂ','shit','fuck','니애미','ㅄ','ㅂㅅ','병신','보지','자지','엄마','sex','cex'];
-const normalizeText=(t='')=>String(t).toLowerCase().replace(/[^a-z0-9가-힣]/g,'');
-const containsProfanity=(t='')=>BAD_WORDS.some(w=>normalizeText(t).includes(normalizeText(w)));
+const BAD_WORDS=['씨발','시발','병신','fuck','fucking','shit','bitch','섹스'];
+const normalizeText=(t='')=>String(t).toLowerCase().replace(/[^a-z0-9가-힣\s]/g,' ').replace(/\s+/g,' ').trim();
+// 정상 문장 오탐을 줄이기 위해 공백 단위 토큰/문장 경계 중심으로 검사
+const containsProfanity=(t='')=>{const n=normalizeText(t); if(!n) return false; const tokens=n.split(' '); return BAD_WORDS.some(w=> tokens.includes(normalizeText(w)) || n.match(new RegExp(`(^|\s)${normalizeText(w)}($|\s)`)));};
 const fmt=(d)=>{if(!d)return'시간 정보 없음';const x=new Date(d),p=n=>String(n).padStart(2,'0');return `${p(x.getMonth()+1)}/${p(x.getDate())} ${p(x.getHours())}:${p(x.getMinutes())}`};
+let searchQuery=''; let selectedGenre='ALL'; let genreVisible=false;
+const collapsedKey='tier-collapsed';
+const getCollapsed=()=>JSON.parse(localStorage.getItem(collapsedKey)||'{}');
+const setCollapsed=(m)=>localStorage.setItem(collapsedKey,JSON.stringify(m));
 async function load(){data=await api('/api/webtoons');}
 function route(){const id=location.hash.split('/')[2];if(id)detail(id);else list();}
-function list(){ $('#hero').classList.remove('hidden'); $('#list-view').classList.remove('hidden'); $('#detail-view').classList.add('hidden'); const root=$('#tiers'); root.innerHTML=''; tiers.forEach(t=>{const sec=document.createElement('section');sec.className='tier';sec.innerHTML=`<h3>${t} Tier</h3><div class='grid'></div>`; const g=sec.querySelector('.grid'); data.filter(w=>w.tier===t).sort((a,b)=>{const sa=Number(a?.score);const sb=Number(b?.score);const va=Number.isFinite(sa);const vb=Number.isFinite(sb);if(va&&vb)return sb-sa;if(va)return -1;if(vb)return 1;return 0;}).forEach(w=>{const c=document.createElement('article');c.className='card';c.innerHTML=`<div class='cover'>${w.imageUrl?`<img src='${w.imageUrl}' loading='lazy'/>`:'📖'}</div><h4>${w.title}</h4><p>${Number.isFinite(Number(w.score))?Number(w.score).toFixed(1):'-'} / 10</p><small>좋아요 ${w.likeCount||0} / 싫어요 ${w.dislikeCount||0}</small>`; c.onclick=()=>location.hash=`#/work/${w.id}`; g.appendChild(c);}); root.appendChild(sec);});}
+function list(){ $('#hero').classList.remove('hidden'); $('#list-view').classList.remove('hidden'); $('#detail-view').classList.add('hidden');
+  const root=$('#tiers');
+  if(!$('#search-panel')){
+    const panel=document.createElement('section'); panel.className='tier'; panel.id='search-panel';
+    panel.innerHTML=`<div class='search-row'><input id='search-input' placeholder='작품 제목 검색'/><button id='search-btn'>검색</button><button id='search-reset' class='ghost'>초기화</button></div><div id='genre-wrap' class='hidden'><select id='genre-select'></select></div><p id='search-empty' class='empty hidden'>검색 결과가 없습니다.</p>`;
+    root.parentNode.insertBefore(panel, root);
+  }
+  $('#search-input').value=searchQuery;
+  const runSearch=()=>{searchQuery=($('#search-input').value||'').trim().toLowerCase(); genreVisible=true; renderGenres(); list();};
+  $('#search-btn').onclick=runSearch; $('#search-input').onkeydown=(e)=>{if(e.key==='Enter') runSearch();};
+  $('#search-reset').onclick=()=>{searchQuery=''; selectedGenre='ALL'; genreVisible=false; list();};
+
+  const normalized=data.map(w=>({...w,_genre:(w.genre||'기타').trim()||'기타'}));
+  const filtered=normalized.filter(w=>{
+    const byQ=!searchQuery || String(w.title||'').toLowerCase().includes(searchQuery);
+    const byG=selectedGenre==='ALL' || w._genre===selectedGenre;
+    return byQ && byG;
+  });
+  function renderGenres(){
+    const wrap=$('#genre-wrap'); wrap.classList.toggle('hidden',!genreVisible);
+    const genres=[...new Set(normalized.map(w=>w._genre))].sort();
+    const sel=$('#genre-select');
+    sel.innerHTML=`<option value='ALL'>전체 장르</option>`+genres.map(g=>`<option ${selectedGenre===g?'selected':''}>${g}</option>`).join('');
+    sel.onchange=(e)=>{selectedGenre=e.target.value; list();};
+  }
+  renderGenres();
+
+  root.innerHTML=''; const collapsed=getCollapsed(); let totalShown=0;
+  tiers.forEach(t=>{const tierItems=filtered.filter(w=>w.tier===t).sort((a,b)=>{const sa=Number(a?.score),sb=Number(b?.score);const va=Number.isFinite(sa),vb=Number.isFinite(sb);if(va&&vb)return sb-sa;if(va)return -1;if(vb)return 1;return 0;}); totalShown += tierItems.length;
+    const sec=document.createElement('section');sec.className='tier';sec.innerHTML=`<h3 class='tier-title' data-tier='${t}'>${t} Tier · ${tierItems.length}개 <span class='chev'>${collapsed[t]?'▸':'▾'}</span></h3><div class='grid ${collapsed[t]?'collapsed':''}'></div>`;
+    const g=sec.querySelector('.grid'); tierItems.forEach(w=>{const c=document.createElement('article');c.className='card';c.innerHTML=`<div class='cover'>${w.imageUrl?`<img src='${w.imageUrl}' loading='lazy'/>`:'📖'}</div><h4>${w.title}</h4><p>${Number.isFinite(Number(w.score))?Number(w.score).toFixed(1):'-'} / 10</p><small>좋아요 ${w.likeCount||0} / 싫어요 ${w.dislikeCount||0}</small>`; c.onclick=()=>location.hash=`#/work/${w.id}`; g.appendChild(c);});
+    sec.querySelector('.tier-title').onclick=()=>{const m=getCollapsed(); m[t]=!m[t]; setCollapsed(m); list();};
+    root.appendChild(sec);
+  });
+  $('#search-empty').classList.toggle('hidden', totalShown!==0);
+}
+
 function commentNode(work,c){const adminClass=c.isAdmin?'admin-name':'';const badge=c.isAdmin?`<span class='admin-badge'>ADMIN</span>`:'';const replies=(c.replies||[]).map(r=>`<div class='reply'><b class='${r.isAdmin?'admin-name':''}'>${r.nickname}</b>${r.isAdmin?`<span class='admin-badge'>ADMIN</span>`:''}<span class='time'>${fmt(r.createdAt)}</span><p>${r.content}</p>${isAdmin?`<button data-rdel='${c.id}:${r.id}' class='ghost'>삭제</button>`:''}</div>`).join('');
 return `<article class='comment'><div><b class='${adminClass}'>${c.nickname}</b>${badge}<span class='time'>${fmt(c.createdAt)}</span><p>${c.content}</p>${replies}<form class='reply-form' data-reply='${c.id}'><input name='nickname' placeholder='닉네임' ${isAdmin?'hidden':''}/><input name='content' placeholder='답글' required/><button>Reply</button></form></div><div><button data-clike='${c.id}' class='ghost'>👍 ${c.likeCount||0}</button>${isAdmin?`<button data-cdel='${c.id}' class='ghost'>삭제</button>`:''}</div></article>`}
 function detail(id){const w=data.find(x=>x.id===id); if(!w){location.hash='';return;} const detailImage = w.coverImage || w.imageUrl || w.thumbnail || ''; $('#hero').classList.add('hidden'); $('#list-view').classList.add('hidden'); const d=$('#detail-view'); d.classList.remove('hidden'); const userVote=localStorage.getItem(voteKey(id)); const comments=[...(w.comments||[])]; comments.sort(sortMode==='likes'?(a,b)=>(b.likeCount||0)-(a.likeCount||0):(a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
