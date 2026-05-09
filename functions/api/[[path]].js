@@ -27,7 +27,7 @@ export async function onRequest(context) {
 
   const rowsToWebtoon = (r) => ({ ...r, score: Number(r.score || 0), likeCount: Number(r.like_count || 0), dislikeCount: Number(r.dislike_count || 0), imageUrl: r.image_url || '', reviewReason: r.review_reason || '', comments: JSON.parse(r.comments_json || '[]') });
 
-  const BAD_WORDS = ['노무현','응디','부엉이','운지','섹스','씨발','시발','병신','좆','ㅅㅂ','shit','fuck'];
+  const BAD_WORDS = ['노무현','응디','부엉이','운지','섹스','씨발','시발','병신','보지','자지','니애미','엄마','좆','ㅅㅂ','shit','fuck','ㅂㅅ','ㅄ','cex','sex'];
   const normalizeText = (t='') => String(t).toLowerCase().replace(/[^a-z0-9가-힣]/g,'');
   const containsProfanity = (t='') => {
     const n = normalizeText(t);
