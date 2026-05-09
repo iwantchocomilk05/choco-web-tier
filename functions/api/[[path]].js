@@ -5,15 +5,48 @@ export async function onRequest(context) {
   const method = request.method;
   const seg = path.split('/').filter(Boolean);
 
-  const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
-  const isAdmin = request.headers.get('x-admin-password') === env.ADMIN_PASSWORD;
+  const json = (data, status = 200, headers = {}) =>
+    new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...headers } });
+
+  const parseCookies = (raw) => (raw || '').split(';').filter(Boolean).reduce((a, p) => {
+    const [k, ...v] = p.trim().split('=');
+    a[k] = decodeURIComponent(v.join('='));
+    return a;
+  }, {});
+
+  const cookies = parseCookies(request.headers.get('cookie'));
+  const adminConfigured = Boolean(env.ADMIN_USERNAME && env.ADMIN_PASSWORD);
+  const tokenSecret = env.ADMIN_SESSION_SECRET || env.ADMIN_PASSWORD || '';
+  const isAdmin = adminConfigured && (
+    request.headers.get('x-admin-password') === env.ADMIN_PASSWORD ||
+    cookies.wt_admin_session === tokenSecret
+  );
 
   const db = env.DB;
   if (!db) return json({ error: 'DB binding missing' }, 500);
 
   const rowsToWebtoon = (r) => ({ ...r, score: Number(r.score || 0), likeCount: Number(r.like_count || 0), dislikeCount: Number(r.dislike_count || 0), imageUrl: r.image_url || '', reviewReason: r.review_reason || '', comments: JSON.parse(r.comments_json || '[]') });
 
-  if (seg[0] === 'auth' && seg[1] === 'me') return json({ isAdmin });
+  if (seg[0] === 'auth' && seg[1] === 'login' && method === 'POST') {
+    if (!adminConfigured) return json({ error: 'admin credentials not configured' }, 500);
+    const b = await request.json().catch(() => ({}));
+    if (b.username !== env.ADMIN_USERNAME || b.password !== env.ADMIN_PASSWORD) {
+      return json({ error: 'invalid credentials' }, 401);
+    }
+    return json({ ok: true }, 200, {
+      'Set-Cookie': `wt_admin_session=${encodeURIComponent(tokenSecret)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800`
+    });
+  }
+
+  if (seg[0] === 'auth' && seg[1] === 'logout' && method === 'POST') {
+    return json({ ok: true }, 200, {
+      'Set-Cookie': 'wt_admin_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax'
+    });
+  }
+
+  if (seg[0] === 'auth' && seg[1] === 'me') {
+    return json({ isAdmin, adminConfigured });
+  }
 
   if (seg[0] === 'webtoons' && seg.length === 1 && method === 'GET') {
     const { results } = await db.prepare('SELECT * FROM webtoons').all();
