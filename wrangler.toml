@@ -1,8 +1,8 @@
 name = "webtoon-tier-cloudflare"
-compatibility_date = "2026-05-08"
+compatibility_date = "2026-05-09"
+pages_build_output_dir = "public"
 
-# This project currently uses Express + JSON file storage.
-# Cloudflare Pages cannot execute this Node server directly.
-# Recommended architecture:
-# 1) Pages: serve frontend (`public/`)
-# 2) Backend: keep Node server on external host OR migrate API to Workers + D1.
+[[d1_databases]]
+binding = "DB"
+database_name = "webtoon-tier-db"
+database_id = "REPLACE_WITH_REAL_D1_DATABASE_ID"
