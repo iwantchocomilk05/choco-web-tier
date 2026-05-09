@@ -1,6 +1,9 @@
 const tiers=['S','A','B','C','D'];let isAdmin=false;let data=[];let sortMode='latest';const ADMIN='쪼코우유먹을래';
 const $=(s)=>document.querySelector(s);const voteKey=(id)=>`vote:${id}`;const clikeKey=(id,c)=>`clike:${id}:${c}`;
 const api=async(u,o={})=>{const r=await fetch(u,{...o,credentials:'include'});if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error||'err');return r.status===204?null:r.json()};
+const BAD_WORDS=['노무현','응디','부엉이','운지','섹스','씨발','시발','병신','좆','ㅅㅂ','shit','fuck','니애미','ㅄ','ㅂㅅ','병신','보지','자지','엄마','sex','cex'];
+const normalizeText=(t='')=>String(t).toLowerCase().replace(/[^a-z0-9가-힣]/g,'');
+const containsProfanity=(t='')=>BAD_WORDS.some(w=>normalizeText(t).includes(normalizeText(w)));
 const fmt=(d)=>{if(!d)return'시간 정보 없음';const x=new Date(d),p=n=>String(n).padStart(2,'0');return `${p(x.getMonth()+1)}/${p(x.getDate())} ${p(x.getHours())}:${p(x.getMinutes())}`};
 async function load(){data=await api('/api/webtoons');}
 function route(){const id=location.hash.split('/')[2];if(id)detail(id);else list();}
@@ -13,10 +16,10 @@ $('#sort').value=sortMode; $('#sort').onchange=e=>{sortMode=e.target.value;detai
 $('#like').onclick=()=>toggleVote(id,'like'); $('#dislike').onclick=()=>toggleVote(id,'dislike');
 if(isAdmin&&$('#save-score')) $('#save-score').onclick=async()=>{const v=Number($('#score-edit').value); if(!Number.isFinite(v)||v<0||v>10){alert('0~10 사이 점수를 입력해주세요.');return;} await api(`/api/webtoons/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({score:v})}); await load(); detail(id);};
 if(isAdmin&&$('#delete-work')) $('#delete-work').onclick=async()=>{if(!confirm('작품 삭제?'))return;await api(`/api/webtoons/${id}`,{method:'DELETE'});await load();location.hash='';};
-$('#cform').onsubmit=async(e)=>{e.preventDefault();const fd=new FormData(e.target);await api(`/api/webtoons/${id}/comments`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nickname:isAdmin?ADMIN:fd.get('nickname'),content:fd.get('content')})});await load();detail(id);};
+$('#cform').onsubmit=async(e)=>{e.preventDefault();const fd=new FormData(e.target);const nn=isAdmin?ADMIN:fd.get('nickname');const cc=fd.get('content');if(containsProfanity(nn)||containsProfanity(cc)){alert('부적절한 표현이 포함되어 있어 등록할 수 없습니다.');return;}await api(`/api/webtoons/${id}/comments`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nickname:nn,content:cc})});await load();detail(id);};
 d.querySelectorAll('[data-cdel]').forEach(b=>b.onclick=async()=>{if(!confirm('댓글 삭제?'))return;await api(`/api/webtoons/${id}/comments/${b.dataset.cdel}`,{method:'DELETE'});await load();detail(id);});
 d.querySelectorAll('[data-clike]').forEach(b=>b.onclick=async()=>{const key=clikeKey(id,b.dataset.clike);const liked=localStorage.getItem(key)==='1';await api(`/api/webtoons/${id}/comments/${b.dataset.clike}/like`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({liked})}); if(liked)localStorage.removeItem(key); else localStorage.setItem(key,'1'); await load();detail(id);});
-d.querySelectorAll('[data-reply]').forEach(f=>f.onsubmit=async(e)=>{e.preventDefault();const fd=new FormData(f);await api(`/api/webtoons/${id}/comments/${f.dataset.reply}/replies`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nickname:isAdmin?ADMIN:fd.get('nickname'),content:fd.get('content')})});await load();detail(id);});
+d.querySelectorAll('[data-reply]').forEach(f=>f.onsubmit=async(e)=>{e.preventDefault();const fd=new FormData(f);const nn=isAdmin?ADMIN:fd.get('nickname');const cc=fd.get('content');if(containsProfanity(nn)||containsProfanity(cc)){alert('부적절한 표현이 포함되어 있어 등록할 수 없습니다.');return;}await api(`/api/webtoons/${id}/comments/${f.dataset.reply}/replies`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nickname:nn,content:cc})});await load();detail(id);});
 d.querySelectorAll('[data-rdel]').forEach(b=>b.onclick=async()=>{if(!confirm('대댓글 삭제?'))return;const [cid,rid]=b.dataset.rdel.split(':');await api(`/api/webtoons/${id}/comments/${cid}/replies/${rid}`,{method:'DELETE'});await load();detail(id);});
 }
 async function toggleVote(id,next){const prev=localStorage.getItem(voteKey(id)); const vote=prev===next?null:next; await api(`/api/webtoons/${id}/vote`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prevVote:prev,vote})}); if(vote)localStorage.setItem(voteKey(id),vote); else localStorage.removeItem(voteKey(id)); await load();detail(id);} 

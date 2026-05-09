@@ -27,6 +27,13 @@ export async function onRequest(context) {
 
   const rowsToWebtoon = (r) => ({ ...r, score: Number(r.score || 0), likeCount: Number(r.like_count || 0), dislikeCount: Number(r.dislike_count || 0), imageUrl: r.image_url || '', reviewReason: r.review_reason || '', comments: JSON.parse(r.comments_json || '[]') });
 
+  const BAD_WORDS = ['노무현','응디','부엉이','운지','섹스','씨발','시발','병신','보지','자지','니애미','엄마','좆','ㅅㅂ','shit','fuck','ㅂㅅ','ㅄ','cex','sex'];
+  const normalizeText = (t='') => String(t).toLowerCase().replace(/[^a-z0-9가-힣]/g,'');
+  const containsProfanity = (t='') => {
+    const n = normalizeText(t);
+    return BAD_WORDS.some((w) => n.includes(normalizeText(w)));
+  };
+
   if (seg[0] === 'auth' && seg[1] === 'login' && method === 'POST') {
     if (!adminConfigured) return json({ error: 'admin credentials not configured' }, 500);
     const b = await request.json().catch(() => ({}));
@@ -94,9 +101,59 @@ export async function onRequest(context) {
     const id = seg[1]; const b = await request.json();
     const cur = await db.prepare('SELECT * FROM webtoons WHERE id=?').bind(id).first(); if (!cur) return json({ error: 'not found' }, 404);
     const comments = JSON.parse(cur.comments_json || '[]');
-    comments.push({ id: crypto.randomUUID(), nickname: isAdmin ? '쪼코우유먹을래' : (b.nickname || '익명'), content: b.content || '', createdAt: new Date().toISOString(), likeCount: 0, isAdmin, replies: [] });
+    const nickname = isAdmin ? '쪼코우유먹을래' : (b.nickname || '익명');
+    const content = b.content || '';
+    if (containsProfanity(nickname) || containsProfanity(content)) return json({ error: '부적절한 표현이 포함되어 있어 등록할 수 없습니다.' }, 400);
+    comments.push({ id: crypto.randomUUID(), nickname, content, createdAt: new Date().toISOString(), likeCount: 0, isAdmin, replies: [] });
     await db.prepare('UPDATE webtoons SET comments_json=? WHERE id=?').bind(JSON.stringify(comments), id).run();
     return json(comments[comments.length - 1], 201);
+  }
+
+
+
+  if (seg[0] === 'webtoons' && seg[2] === 'comments' && seg.length === 4 && method === 'DELETE') {
+    if (!isAdmin) return json({ error: 'admin only' }, 403);
+    const id = seg[1]; const commentId = seg[3];
+    const cur = await db.prepare('SELECT * FROM webtoons WHERE id=?').bind(id).first(); if (!cur) return json({ error: 'not found' }, 404);
+    const comments = JSON.parse(cur.comments_json || '[]').filter((c) => c.id !== commentId);
+    await db.prepare('UPDATE webtoons SET comments_json=? WHERE id=?').bind(JSON.stringify(comments), id).run();
+    return new Response('', { status: 204 });
+  }
+
+  if (seg[0] === 'webtoons' && seg[2] === 'comments' && seg[4] === 'like' && method === 'POST') {
+    const id = seg[1]; const commentId = seg[3]; const b = await request.json().catch(()=>({}));
+    const cur = await db.prepare('SELECT * FROM webtoons WHERE id=?').bind(id).first(); if (!cur) return json({ error: 'not found' }, 404);
+    const comments = JSON.parse(cur.comments_json || '[]');
+    const c = comments.find((x) => x.id === commentId); if (!c) return json({ error: 'comment not found' }, 404);
+    c.likeCount = Number(c.likeCount || 0);
+    c.likeCount = b.liked ? Math.max(0, c.likeCount - 1) : c.likeCount + 1;
+    await db.prepare('UPDATE webtoons SET comments_json=? WHERE id=?').bind(JSON.stringify(comments), id).run();
+    return json({ likeCount: c.likeCount });
+  }
+
+  if (seg[0] === 'webtoons' && seg[2] === 'comments' && seg[4] === 'replies' && method === 'POST') {
+    const id = seg[1]; const commentId = seg[3]; const b = await request.json().catch(()=>({}));
+    const cur = await db.prepare('SELECT * FROM webtoons WHERE id=?').bind(id).first(); if (!cur) return json({ error: 'not found' }, 404);
+    const comments = JSON.parse(cur.comments_json || '[]');
+    const c = comments.find((x) => x.id === commentId); if (!c) return json({ error: 'comment not found' }, 404);
+    const nickname = isAdmin ? '쪼코우유먹을래' : (b.nickname || '익명');
+    const content = b.content || '';
+    if (containsProfanity(nickname) || containsProfanity(content)) return json({ error: '부적절한 표현이 포함되어 있어 등록할 수 없습니다.' }, 400);
+    c.replies = Array.isArray(c.replies) ? c.replies : [];
+    c.replies.push({ id: crypto.randomUUID(), nickname, content, createdAt: new Date().toISOString(), isAdmin });
+    await db.prepare('UPDATE webtoons SET comments_json=? WHERE id=?').bind(JSON.stringify(comments), id).run();
+    return json(c.replies[c.replies.length - 1], 201);
+  }
+
+  if (seg[0] === 'webtoons' && seg[2] === 'comments' && seg[4] === 'replies' && seg.length === 6 && method === 'DELETE') {
+    if (!isAdmin) return json({ error: 'admin only' }, 403);
+    const id = seg[1]; const commentId = seg[3]; const replyId = seg[5];
+    const cur = await db.prepare('SELECT * FROM webtoons WHERE id=?').bind(id).first(); if (!cur) return json({ error: 'not found' }, 404);
+    const comments = JSON.parse(cur.comments_json || '[]');
+    const c = comments.find((x) => x.id === commentId); if (!c) return json({ error: 'comment not found' }, 404);
+    c.replies = (c.replies || []).filter((r) => r.id !== replyId);
+    await db.prepare('UPDATE webtoons SET comments_json=? WHERE id=?').bind(JSON.stringify(comments), id).run();
+    return new Response('', { status: 204 });
   }
 
   return json({ error: 'not implemented in pages function yet', path, method }, 404);
