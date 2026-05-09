@@ -24,8 +24,9 @@ export async function onRequest(context) {
 
   const db = env.DB;
   if (!db) return json({ error: 'DB binding missing' }, 500);
+  try { await db.prepare('ALTER TABLE webtoons ADD COLUMN platform TEXT').run(); } catch (_) {}
 
-  const rowsToWebtoon = (r) => ({ ...r, score: Number(r.score || 0), likeCount: Number(r.like_count || 0), dislikeCount: Number(r.dislike_count || 0), imageUrl: r.image_url || '', reviewReason: r.review_reason || '', comments: JSON.parse(r.comments_json || '[]') });
+  const rowsToWebtoon = (r) => ({ ...r, score: Number(r.score || 0), likeCount: Number(r.like_count || 0), dislikeCount: Number(r.dislike_count || 0), imageUrl: r.image_url || '', platform: r.platform || '플랫폼 미정', reviewReason: r.review_reason || '', comments: JSON.parse(r.comments_json || '[]') });
 
   const BAD_WORDS = ['씨발','시발','병신','fuck','fucking','shit','bitch','섹스'];
   const normalizeText = (t='') => String(t).toLowerCase().replace(/[^a-z0-9가-힣\s]/g,' ').replace(/\s+/g,' ').trim();
@@ -67,8 +68,8 @@ export async function onRequest(context) {
     if (!isAdmin) return json({ error: 'admin only' }, 403);
     const b = await request.json();
     const id = crypto.randomUUID();
-    await db.prepare('INSERT INTO webtoons (id,title,genre,tier,score,image_url,note,review_reason,like_count,dislike_count,comments_json,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
-      .bind(id, b.title || '', b.genre || '', (b.tier || 'B').toUpperCase(), Number(b.score || 0), b.imageUrl || '', b.note || '', b.reviewReason || '', 0, 0, '[]', new Date().toISOString()).run();
+    await db.prepare('INSERT INTO webtoons (id,title,genre,tier,score,image_url,platform,note,review_reason,like_count,dislike_count,comments_json,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)')
+      .bind(id, b.title || '', b.genre || '', (b.tier || 'B').toUpperCase(), Number(b.score || 0), b.imageUrl || '', b.platform || '', b.note || '', b.reviewReason || '', 0, 0, '[]', new Date().toISOString()).run();
     const one = await db.prepare('SELECT * FROM webtoons WHERE id=?').bind(id).first();
     return json(rowsToWebtoon(one), 201);
   }
@@ -79,7 +80,7 @@ export async function onRequest(context) {
     const cur = await db.prepare('SELECT * FROM webtoons WHERE id=?').bind(id).first();
     if (!cur) return json({ error: 'not found' }, 404);
     const b = await request.json();
-    await db.prepare('UPDATE webtoons SET title=?, genre=?, tier=?, score=?, image_url=?, note=?, review_reason=? WHERE id=?').bind(b.title ?? cur.title, b.genre ?? cur.genre, (b.tier || cur.tier).toUpperCase(), b.score ?? cur.score, b.imageUrl ?? cur.image_url, b.note ?? cur.note, b.reviewReason ?? cur.review_reason, id).run();
+    await db.prepare('UPDATE webtoons SET title=?, genre=?, tier=?, score=?, image_url=?, platform=?, note=?, review_reason=? WHERE id=?').bind(b.title ?? cur.title, b.genre ?? cur.genre, (b.tier || cur.tier).toUpperCase(), b.score ?? cur.score, b.imageUrl ?? cur.image_url, b.platform ?? cur.platform, b.note ?? cur.note, b.reviewReason ?? cur.review_reason, id).run();
     const one = await db.prepare('SELECT * FROM webtoons WHERE id=?').bind(id).first();
     return json(rowsToWebtoon(one));
   }
