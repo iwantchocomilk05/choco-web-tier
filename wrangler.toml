@@ -5,4 +5,4 @@ pages_build_output_dir = "public"
 [[d1_databases]]
 binding = "DB"
 database_name = "webtoon-tier-db"
-database_id = "REPLACE_WITH_REAL_D1_DATABASE_ID"
+database_id = "d578ee1f-ad00-450b-b00a-ee26f2a6fa57"
